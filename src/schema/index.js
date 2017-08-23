@@ -46,6 +46,25 @@ const typeDefs = `
   	signInUser(email: AUTH_PROVIDER_EMAIL): SigninPayload!
   	createVote(linkId: ID!): Vote
   }
+  
+  type Subscription {
+    Link(filter: LinkSubscriptionFilter): LinkSubscriptionPayload   
+  }
+  
+  input LinkSubscriptionFilter {
+    mutation_in: [_ModelMutationType!]
+  }
+  
+   enum _ModelMutationType {
+    CREATED
+    UPDATED
+    DELETED  
+  }
+  
+  type LinkSubscriptionPayload {
+    mutation: _ModelMutationType!
+    node: Link  
+  }
 `;
 
 // Generate the schema object from your types definition.

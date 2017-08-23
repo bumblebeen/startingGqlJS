@@ -1,5 +1,6 @@
 const { ObjectID } = require('mongodb');
 const {URL} = require('url');
+const pubsub = require('../pubsub');
 
 class ValidationError extends Error {
     constructor(message, field) {
@@ -10,7 +11,7 @@ class ValidationError extends Error {
 
 function assertValidLink ({url}) {
 	try {
-		new URL(url)
+		// new URL(url)
 	} catch (error) {
         let err = new ValidationError(error, 'url');
         err.message = "WEH" + err.message
@@ -32,6 +33,11 @@ const links = [
 ];
 
 module.exports = {
+    Subscription: {
+        Link: {
+            subscribe: () => pubsub.asyncIterator('Link')
+		}
+	},
 	Query: {
         allLinks: async (root, data, {mongo: {Links}}) => { // 1
             return await Links.find({}).toArray(); // 2
@@ -49,9 +55,12 @@ module.exports = {
 	    createLink: async (root, data, {mongo: {Links}, user}) => {
 		  assertValidLink(data);
 	      const newLink = Object.assign({postedById: user && user._id}, data);
-	      console.log(newLink);
 	      const response = await Links.insert(newLink);
-	      return Object.assign({id: response.insertedIds[0]}, newLink); // 4
+
+	      newLink.id = response.insertedIds[0];
+	      const publishable = Object.assign({postedBy: user._id}, newLink);
+	      pubsub.publish('Link', {Link: {mutation: 'CREATED', node: publishable}});
+	      return newLink;
 	    },
 		createUser: async (root, data, {mongo: {Users}}) => {
 			const newUser = {
@@ -74,6 +83,7 @@ module.exports = {
 			return root._id || root.id
         },
         postedBy: async({postedById}, data, {dataloaders: {userLoader}}) => {
+			console.log('I am not called');
         	return await userLoader.load(postedById);
         },
 		// postedBy: async({postedById}, data, {mongo: {Users}}) => {
