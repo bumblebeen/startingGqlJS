@@ -1,4 +1,22 @@
 const { ObjectID } = require('mongodb');
+const {URL} = require('url');
+
+class ValidationError extends Error {
+    constructor(message, field) {
+        super(message);
+        this.field = field;
+    }
+}
+
+function assertValidLink ({url}) {
+	try {
+		new URL(url)
+	} catch (error) {
+        let err = new ValidationError(error, 'url');
+        err.message = "WEH" + err.message
+		throw err
+	}
+}
 
 const links = [
   {
@@ -29,6 +47,7 @@ module.exports = {
 			return Object.assign({id: response.insertedIds[0]}, newVote);
 		},
 	    createLink: async (root, data, {mongo: {Links}, user}) => {
+		  assertValidLink(data);
 	      const newLink = Object.assign({postedById: user && user._id}, data);
 	      console.log(newLink);
 	      const response = await Links.insert(newLink);
